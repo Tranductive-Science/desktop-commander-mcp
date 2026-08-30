@@ -23,6 +23,33 @@ This edition adds full **Production-Grade Streamable HTTP & OAuth 2.0 Edge Deplo
 
 ---
 
+## 💡 Addressing Upstream Community Requests
+
+This release specifically solves high-demand community requests that were previously unaddressed or blocked on upstream Desktop Commander:
+
+| Upstream Issue | Problem Reported | How Transductive Edge Solves It |
+|---|---|---|
+| **[#664](https://github.com/wonderwhy-er/DesktopCommanderMCP/issues/664)** | *Improve OpenAI / ChatGPT compatibility* | Tested live with ChatGPT Custom Apps & Developer Connectors, supporting both stateful sessions and direct stateless tool dispatches across all 26 tools. |
+| **[#617](https://github.com/wonderwhy-er/DesktopCommanderMCP/issues/617)** | *A way to remotely use DesktopCommander on local net via Streamable HTTP* | Implements standard `transport: "streamable-http"` on `/mcp`, allowing LAN, WAN, or Cloudflare Tunnel routing without requiring local `stdio`. |
+| **[#601](https://github.com/wonderwhy-er/DesktopCommanderMCP/issues/601)** & **#646** | *OAuth Session Creation Failure with ChatGPT PKCE* | Full OAuth 2.0 / OIDC Resource Server with automated Cloudflare Worker authorization server and JWKS verification. |
+
+---
+
+## 🛠️ Anticipated Problems & Troubleshooting Matrix
+
+When deploying remote MCP servers for AI agents over the web, here are real-world edge cases we anticipated and resolved:
+
+| Scenario | Symptom | Built-in Mitigation / Fix |
+|---|---|---|
+| **Stateless OpenAI Dispatches** | ChatGPT calls tool directly without sending `mcp-session-id`, causing `400 Invalid Request` | `mcp-router.ts` automatically dispatches standalone requests statelessly without dropping the connection. |
+| **HTTP Accept Negotiation** | Client sends `Accept: application/json` without `text/event-stream`, causing `406 Not Acceptable` | Streamable transport includes auto-normalization of `Accept` headers and dual SSE/JSON payload support. |
+| **Large Directory Traversals** | Prompting AI to list a root drive (e.g. `E:\` or `C:\`) hangs or hits Cloudflare 100s proxy timeout | The AI is guided to specify `depth: 1` on root drives and utilize `start_search` with ripgrep for subtree lookups. |
+| **Missing Ripgrep in Daemon Mode** | Running as a Windows Service/Task strips user `PATH`, failing `start_search` | Multi-tier `ripgrep-resolver.ts` automatically probes WinGet, Program Files, AppData, and System directories. |
+| **Cloudflare Access Interception** | Cloudflare Access Managed OAuth swallows Authorization headers before reaching server | Desktop Commander manages its own OAuth resource metadata; Cloudflare Tunnel is used purely for transport ingress. |
+
+---
+
+
 
 ## 🖥️ Try the Desktop Commander App (Beta)
 
