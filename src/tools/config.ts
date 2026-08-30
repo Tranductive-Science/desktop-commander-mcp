@@ -1,7 +1,7 @@
 import { configManager, ServerConfig } from '../config-manager.js';
 import { SetConfigValueArgsSchema } from './schemas.js';
 import { getSystemInfo } from '../utils/system-info.js';
-import { currentClient } from '../server.js';
+import { getCurrentClient } from '../utils/server-context.js';
 import { featureFlagManager } from '../utils/feature-flags.js';
 import { access, readFile } from 'node:fs/promises';
 import { constants as fsConstants } from 'node:fs';
@@ -107,7 +107,7 @@ export async function getConfig() {
     
     const configWithSystemInfo = {
       ...config,
-      currentClient,
+      currentClient: getCurrentClient(),
       featureFlags: featureFlagManager.getAll(),
       systemInfo: {
         ...systemInfo,

@@ -53,6 +53,11 @@ export async function getRipgrepPath(): Promise<string> {
     commonPaths.push(
       'C:\\Program Files\\Ripgrep\\rg.exe',
       'C:\\Program Files (x86)\\Ripgrep\\rg.exe',
+      'C:\\Users\\Admin\\AppData\\Local\\Microsoft\\WinGet\\Links\\rg.exe',
+      'C:\\Users\\Admin\\.codex\\packages\\standalone\\current\\codex-path\\rg.exe',
+      path.join(process.env.LOCALAPPDATA || '', 'Microsoft', 'WinGet', 'Links', 'rg.exe'),
+      path.join(os.homedir(), 'AppData', 'Local', 'Microsoft', 'WinGet', 'Links', 'rg.exe'),
+      path.join(os.homedir(), '.codex', 'packages', 'standalone', 'current', 'codex-path', 'rg.exe'),
       path.join(os.homedir(), 'scoop', 'apps', 'ripgrep', 'current', 'rg.exe'),
       path.join(os.homedir(), '.cargo', 'bin', 'rg.exe')
     );

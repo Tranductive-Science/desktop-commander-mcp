@@ -4,6 +4,7 @@
  */
 
 import type { FilteredStdioServerTransport } from '../custom-stdio.js';
+import { getMcpLogSink } from './mcp-log-context.js';
 
 // Global reference to the MCP transport (set in index.ts)
 declare global {
@@ -17,9 +18,13 @@ export type LogLevel = 'emergency' | 'alert' | 'critical' | 'error' | 'warning' 
  */
 export function log(level: LogLevel, message: string, data?: any): void {
   try {
-    // Check if MCP transport is available
-    if (global.mcpTransport) {
-      // Always use MCP logging (will buffer if not initialized yet)
+    // Prefer a request-local HTTP sink when one is active. This keeps
+    // concurrent HTTP sessions from broadcasting logs through a process-global transport.
+    const httpSink = getMcpLogSink();
+    if (httpSink) {
+      httpSink(level, message, data);
+    } else if (global.mcpTransport) {
+      // Existing stdio behavior is unchanged.
       global.mcpTransport.sendLog(level, message, data);
     } else {
       // This should rarely happen, but fallback to create a JSON-RPC notification manually

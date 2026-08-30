@@ -41,6 +41,14 @@ async function runServer() {
       return;
     }
 
+    // First-class Streamable HTTP mode. Kept separate from stdio so the existing
+    // local transport path remains unchanged.
+    if (process.argv[2] === 'http' || process.argv.includes('--http')) {
+      const { runHttpServer } = await import('./http/index.js');
+      await runHttpServer();
+      return;
+    }
+
     // Parse command line arguments for onboarding control
     const DISABLE_ONBOARDING = process.argv.includes('--no-onboarding');
     if (DISABLE_ONBOARDING) {

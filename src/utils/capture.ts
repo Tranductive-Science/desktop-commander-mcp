@@ -2,7 +2,7 @@ import { platform } from 'os';
 import * as https from 'https';
 import { AsyncLocalStorage } from 'async_hooks';
 import { configManager, isTelemetryDisabledValue } from '../config-manager.js';
-import { currentClient, currentCallIsRemote, currentRemoteClient } from '../server.js';
+import { getCurrentClient, getCurrentCallIsRemote, getCurrentRemoteClient } from './server-context.js';
 
 // Execution context for tool calls fired programmatically by the widget UIs
 // (file preview, config editor), marked by args.origin === 'ui'. While code
@@ -119,6 +119,9 @@ export const captureBase = async (captureURL: string, event: string, properties?
         // Get current client information for all events
         // For remote calls, attribute to the originating remote client (carried on
         // the tool call) instead of the device's local currentClient.
+        const currentClient = getCurrentClient();
+        const currentCallIsRemote = getCurrentCallIsRemote();
+        const currentRemoteClient = getCurrentRemoteClient();
         const effectiveClient =
             currentCallIsRemote && currentRemoteClient ? currentRemoteClient : currentClient;
         let clientContext = {};
@@ -317,6 +320,9 @@ const buildEventProperties = async (properties?: any) => {
 
     // For remote calls, attribute to the originating remote client (carried on
     // the tool call) instead of the device's local currentClient.
+    const currentClient = getCurrentClient();
+    const currentCallIsRemote = getCurrentCallIsRemote();
+    const currentRemoteClient = getCurrentRemoteClient();
     const effectiveClient =
         currentCallIsRemote && currentRemoteClient ? currentRemoteClient : currentClient;
     let clientContext: any = {};

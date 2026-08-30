@@ -15,6 +15,17 @@ function extractPid(result) {
 // Helper to wait
 const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+async function waitForProcessComplete(pid, maxWaitMs = 15000) {
+  const start = Date.now();
+  while (Date.now() - start < maxWaitMs) {
+    const res = await readProcessOutput({ pid, offset: 0, timeout_ms: 100 });
+    if (res?.content?.[0]?.text?.includes('Process completed')) {
+      return true;
+    }
+    await wait(200);
+  }
+}
+
 /**
  * Test 1: Basic offset=0 (new output) behavior for RUNNING processes
  */
@@ -62,14 +73,14 @@ async function testAbsoluteOffset() {
   console.log('\n📋 Test 2: Absolute position (positive offset)...');
   
   const startResult = await startProcess({
-    command: "node -e \"for(let i=0; i<10; i++) console.log('line' + i)\"",
+    command: 'node -e "let i=0; while(i-10){ console.log(\'line\' + i); i++; }"',
     timeout_ms: 3000
   });
   
   const pid = extractPid(startResult);
   assert(pid, 'Should get PID');
   
-  await wait(500);
+  await waitForProcessComplete(pid);
   
   // Read from line 5
   const read = await readProcessOutput({ pid, offset: 5, length: 3, timeout_ms: 1000 });
@@ -90,14 +101,14 @@ async function testTailBehavior() {
   console.log('\n📋 Test 3: Tail behavior (negative offset)...');
   
   const startResult = await startProcess({
-    command: "node -e \"for(let i=0; i<20; i++) console.log('line' + i)\"",
+    command: 'node -e "let i=0; while(i-20){ console.log(\'line\' + i); i++; }"',
     timeout_ms: 3000
   });
   
   const pid = extractPid(startResult);
   assert(pid, 'Should get PID');
   
-  await wait(500);
+  await waitForProcessComplete(pid);
   
   // Read last 5 lines (output has 21 lines: line0-line19 + empty)
   // Last 5 lines should include line16, line17, line18, line19
@@ -118,14 +129,14 @@ async function testLengthLimit() {
   console.log('\n📋 Test 4: Length limit enforcement...');
   
   const startResult = await startProcess({
-    command: "node -e \"for(let i=0; i<100; i++) console.log('line' + i)\"",
+    command: 'node -e "let i=0; while(i-100){ console.log(\'line\' + i); i++; }"',
     timeout_ms: 3000
   });
   
   const pid = extractPid(startResult);
   assert(pid, 'Should get PID');
   
-  await wait(500);
+  await waitForProcessComplete(pid);
   
   // Read with length limit of 10 from absolute position 0
   const read = await readProcessOutput({ pid, offset: 1, length: 10, timeout_ms: 1000 });
@@ -147,7 +158,7 @@ async function testRuntimeInfo() {
   console.log('\n📋 Test 5: Runtime info for completed processes...');
   
   const startResult = await startProcess({
-    command: "node -e \"setTimeout(() => console.log('done'), 500)\"",
+    command: 'node -e "setTimeout(() => console.log(\'done\'), 500)"',
     timeout_ms: 200  // Return before completion
   });
   
@@ -155,7 +166,7 @@ async function testRuntimeInfo() {
   assert(pid, 'Should get PID');
   
   // Wait for process to complete
-  await wait(1000);
+  await waitForProcessComplete(pid);
   
   const read = await readProcessOutput({ pid, timeout_ms: 1000 });
   assert(!read.isError, 'Read should succeed');
@@ -173,7 +184,8 @@ async function testInteractTruncation() {
   
   // Start a Python REPL
   const startResult = await startProcess({
-    command: 'python3 -i',
+    command: 'python -i',
+    shell: process.platform === 'win32' ? 'cmd.exe' : undefined,
     timeout_ms: 3000
   });
   
@@ -183,7 +195,7 @@ async function testInteractTruncation() {
     return;
   }
   
-  await wait(500);
+  await wait(1500);
   
   // Generate lots of output (more than default 1000 lines)
   const result = await interactWithProcess({
@@ -216,14 +228,14 @@ async function testReReadOutput() {
   console.log('\n📋 Test 7: Re-reading output with absolute offset...');
   
   const startResult = await startProcess({
-    command: "node -e \"for(let i=0; i<5; i++) console.log('data' + i)\"",
+    command: 'node -e "let i=0; while(i-5){ console.log(\'data\' + i); i++; }"',
     timeout_ms: 3000
   });
   
   const pid = extractPid(startResult);
   assert(pid, 'Should get PID');
   
-  await wait(500);
+  await waitForProcessComplete(pid);
   
   // First read with offset=0 (consumes the "new" pointer for running sessions)
   const read1 = await readProcessOutput({ pid, offset: 0, timeout_ms: 1000 });

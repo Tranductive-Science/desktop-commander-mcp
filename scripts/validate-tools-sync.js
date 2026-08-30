@@ -26,40 +26,66 @@ const colors = {
 };
 
 async function extractToolsFromManifest() {
-  const manifestPath = join(rootDir, 'mcpb-bundle', 'manifest.json');
-  const content = await readFile(manifestPath, 'utf-8');
-  const manifest = JSON.parse(content);
-  
-  return manifest.tools.map(tool => tool.name).sort();
+  let manifestPath = join(rootDir, 'mcpb-bundle', 'manifest.json');
+  try {
+    const content = await readFile(manifestPath, 'utf-8');
+    const manifest = JSON.parse(content);
+    return manifest.tools.map(tool => tool.name).sort();
+  } catch {
+    manifestPath = join(rootDir, 'manifest.template.json');
+    const content = await readFile(manifestPath, 'utf-8');
+    const manifest = JSON.parse(content);
+    return manifest.tools.map(tool => tool.name).sort();
+  }
 }
 
 async function extractToolsFromServer() {
   return new Promise((resolve, reject) => {
     // Start the MCP server
     const serverPath = join(rootDir, 'dist', 'index.js');
-    const server = spawn('node', [serverPath], {
+    const server = spawn(process.execPath, [serverPath], {
       stdio: ['pipe', 'pipe', 'pipe']
     });
 
     let output = '';
     let errorOutput = '';
-    const messages = [];
+    let initialized = false;
+
+    const timer = setTimeout(() => {
+      server.kill();
+      reject(new Error(`Timeout waiting for tools/list response. STDERR: ${errorOutput}`));
+    }, 15000);
+
+    const finish = (tools) => {
+      clearTimeout(timer);
+      server.kill();
+      resolve(tools);
+    };
 
     server.stdout.on('data', (data) => {
       output += data.toString();
       
-      // Try to parse each line as JSON-RPC message
       const lines = output.split('\n');
-      output = lines.pop() || ''; // Keep incomplete line
-      
+      output = lines.pop() || '';
+
       for (const line of lines) {
-        if (line.trim()) {
-          try {
-            messages.push(JSON.parse(line));
-          } catch (e) {
-            // Not JSON, might be debug output
+        if (!line.trim()) continue;
+        try {
+          const msg = JSON.parse(line);
+          if (msg.id === 1 && !initialized) {
+            initialized = true;
+            server.stdin.write(JSON.stringify({
+              jsonrpc: '2.0',
+              id: 2,
+              method: 'tools/list',
+              params: {}
+            }) + '\n');
+          } else if (msg.id === 2 && msg.result?.tools) {
+            const tools = msg.result.tools.map(tool => tool.name).sort();
+            finish(tools);
+            return;
           }
-        }
+        } catch {}
       }
     });
 
@@ -84,36 +110,8 @@ async function extractToolsFromServer() {
 
     server.stdin.write(JSON.stringify(initRequest) + '\n');
 
-    // Wait for initialize response, then send tools/list
-    setTimeout(() => {
-      // Step 2: Send tools/list request
-      const toolsRequest = {
-        jsonrpc: '2.0',
-        id: 2,
-        method: 'tools/list',
-        params: {}
-      };
-
-      server.stdin.write(JSON.stringify(toolsRequest) + '\n');
-
-      // Wait for tools/list response
-      setTimeout(() => {
-        server.kill();
-
-        // Find the tools/list response
-        const toolsResponse = messages.find(msg => msg.id === 2 && msg.result);
-
-        if (!toolsResponse) {
-          reject(new Error('No tools/list response received'));
-          return;
-        }
-
-        const tools = toolsResponse.result.tools.map(tool => tool.name).sort();
-        resolve(tools);
-      }, 1000);
-    }, 500);
-
     server.on('error', (error) => {
+      clearTimeout(timer);
       reject(new Error(`Failed to start server: ${error.message}`));
     });
   });

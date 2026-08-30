@@ -78,6 +78,9 @@ import {
 } from './ui/contracts.js';
 import { listUiResources, readUiResource } from './ui/resources.js';
 import { shouldShowMcpUiPreviews } from './utils/mcp-ui-ab-test.js';
+import * as handlers from './handlers/index.js';
+import { ServerResult } from './types.js';
+import { runInServerContext, setDefaultServerState, type DesktopCommanderServerState } from './utils/server-context.js';
 
 // Store startup messages to send after initialization
 const deferredMessages: Array<{ level: string, message: string }> = [];
@@ -94,8 +97,24 @@ export function flushDeferredMessages() {
 }
 
 deferLog('info', 'Loading server.ts');
+deferLog('info', 'Setting up request handlers...');
 
-export const server = new Server(
+export interface CreateServerOptions {
+    setAsDefault?: boolean;
+}
+
+export function createServer(options: CreateServerOptions = {}) {
+    const state: DesktopCommanderServerState = {
+        currentClient: { name: 'uninitialized', version: 'uninitialized' },
+        currentCallIsRemote: false,
+        currentRemoteClient: null,
+    };
+
+    if (options.setAsDefault) {
+        setDefaultServerState(state);
+    }
+
+    const server = new Server(
     {
         name: "desktop-commander",
         version: VERSION,
@@ -136,7 +155,7 @@ server.setRequestHandler(ListPromptsRequestSchema, async () => {
 });
 
 // Store current client info (simple variable)
-let currentClient = { name: 'uninitialized', version: 'uninitialized' };
+let currentClient = state.currentClient;
 
 // Tracks whether the in-flight tool call originated from a remote device.
 // Mirrors the module-level `currentClient` pattern so that telemetry events
@@ -145,7 +164,7 @@ let currentClient = { name: 'uninitialized', version: 'uninitialized' };
 // handler sets this on every call (true when _meta.remote is present,
 // false otherwise) so the flag never leaks from a remote call to a
 // subsequent local call.
-let currentCallIsRemote = false;
+let currentCallIsRemote = state.currentCallIsRemote;
 
 /**
  * Set whether the current tool call is from a remote device.
@@ -153,6 +172,7 @@ let currentCallIsRemote = false;
  */
 function setCurrentCallIsRemote(isRemote: boolean) {
     currentCallIsRemote = isRemote;
+    state.currentCallIsRemote = isRemote;
 }
 
 // The remote caller's client for the in-flight tool call (e.g. openai-mcp,
@@ -160,7 +180,7 @@ function setCurrentCallIsRemote(isRemote: boolean) {
 // Mirrors currentCallIsRemote so telemetry attributes remote events to the
 // actual remote client instead of the device's own currentClient (which stays
 // LOCAL and must not be polluted by remote callers).
-let currentRemoteClient: { name?: string; version?: string } | null = null;
+let currentRemoteClient: { name?: string; version?: string } | null = state.currentRemoteClient;
 
 /**
  * Set the remote caller's client for the current tool call (null when local).
@@ -168,6 +188,7 @@ let currentRemoteClient: { name?: string; version?: string } | null = null;
  */
 function setCurrentRemoteClient(clientInfo: { name?: string; version?: string } | null) {
     currentRemoteClient = clientInfo;
+    state.currentRemoteClient = clientInfo;
 }
 
 /**
@@ -191,6 +212,7 @@ async function updateCurrentClient(clientInfo: { name?: string, version?: string
             name: clientInfo.name || currentClient.name,
             version: clientInfo.version || currentClient.version
         };
+        state.currentClient = currentClient;
 
         // Configure transport for client-specific behavior only if name changed
         if (nameChanged) {
@@ -206,7 +228,7 @@ async function updateCurrentClient(clientInfo: { name?: string, version?: string
 }
 
 // Add handler for initialization method - capture client info
-server.setRequestHandler(InitializeRequestSchema, async (request: InitializeRequest) => {
+server.setRequestHandler(InitializeRequestSchema, (request: InitializeRequest) => runInServerContext(state, async () => {
     try {
         // Extract and store current client information
         const clientInfo = request.params?.clientInfo;
@@ -273,12 +295,8 @@ server.setRequestHandler(InitializeRequestSchema, async (request: InitializeRequ
         logToStderr('error', `Error in initialization handler: ${error}`);
         throw error;
     }
-});
+}));
 
-// Export current client info for access by other modules
-export { currentClient, currentCallIsRemote, currentRemoteClient };
-
-deferLog('info', 'Setting up request handlers...');
 
 /**
  * Check if a tool should be included based on current client
@@ -1245,10 +1263,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
     }
 });
 
-import * as handlers from './handlers/index.js';
-import { ServerResult } from './types.js';
-
-server.setRequestHandler(CallToolRequestSchema, async (request: CallToolRequest): Promise<ServerResult> => {
+server.setRequestHandler(CallToolRequestSchema, (request: CallToolRequest): Promise<ServerResult> => runInServerContext(state, async () => {
     const args = request.params.arguments;
     // Calls fired programmatically by the widget UIs (file preview, config
     // editor) carry origin:'ui'. They are real tool executions but not agent
@@ -1261,7 +1276,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request: CallToolRequest)
         return runInUiOriginCallContext(() => handleCallToolRequest(request));
     }
     return handleCallToolRequest(request);
-});
+}));
 
 async function handleCallToolRequest(request: CallToolRequest): Promise<ServerResult> {
     const { name, arguments: args } = request.params;
@@ -1697,3 +1712,9 @@ async function handleCallToolRequest(request: CallToolRequest): Promise<ServerRe
 
 // Add no-op handlers so Visual Studio initialization succeeds
 server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => ({ resourceTemplates: [] }));
+
+    return server;
+}
+
+// Compatibility singleton: preserves current stdio import/timing exactly while exposing createServer() for isolated instances.
+export const server = createServer({ setAsDefault: true });

@@ -418,25 +418,25 @@ export class TerminalManager {
         });
       }, timeoutMs);
 
-      childProcess.on('exit', (code: any) => {
+      const handleExit = (code: any) => {
         if (childProcess.pid) {
-          // Store completed session before removing active session
-          this.completedSessions.set(childProcess.pid, {
-            pid: childProcess.pid,
-            outputLines: [...session.outputLines], // Copy line buffer
-            exitCode: code,
-            startTime: session.startTime,
-            endTime: new Date(),
-            evictedLines: session.evictedLines,
-            evictedChars: session.evictedChars
-          });
+          if (!this.completedSessions.has(childProcess.pid)) {
+            this.completedSessions.set(childProcess.pid, {
+              pid: childProcess.pid,
+              outputLines: session.outputLines,
+              exitCode: code,
+              startTime: session.startTime,
+              endTime: new Date(),
+              evictedLines: session.evictedLines,
+              evictedChars: session.evictedChars
+            });
 
-          // Keep only last 100 completed sessions
-          if (this.completedSessions.size > 100) {
-            const oldestKey = Array.from(this.completedSessions.keys())[0];
-            this.completedSessions.delete(oldestKey);
+            // Keep only last 100 completed sessions
+            if (this.completedSessions.size > 100) {
+              const oldestKey = Array.from(this.completedSessions.keys())[0];
+              this.completedSessions.delete(oldestKey);
+            }
           }
-
           this.sessions.delete(childProcess.pid);
         }
         exitReason = 'process_exit';
@@ -445,7 +445,10 @@ export class TerminalManager {
           output,
           isBlocked: false
         });
-      });
+      };
+
+      childProcess.on('exit', handleExit);
+      childProcess.on('close', handleExit);
     });
   }
 

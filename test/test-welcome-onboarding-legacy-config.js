@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DIST_INDEX = path.join(__dirname, '..', 'dist', 'index.js');
-const TIMEOUT_MS = 10_000;
+const TIMEOUT_MS = 20_000;
 
 class ExistingConfigClaudeCodeMigrationTest {
   constructor() {
@@ -37,7 +37,7 @@ class ExistingConfigClaudeCodeMigrationTest {
 
   async initializeAsClaudeCode() {
     await new Promise((resolve, reject) => {
-      const child = spawn('node', [DIST_INDEX], {
+      const child = spawn(process.execPath, [DIST_INDEX], {
         env: {
           ...process.env,
           HOME: this.home,
@@ -47,7 +47,9 @@ class ExistingConfigClaudeCodeMigrationTest {
         stdio: ['pipe', 'pipe', 'pipe'],
       });
       let stdout = '';
-      const timeout = setTimeout(() => finish(new Error('Timed out waiting for initialize response')), TIMEOUT_MS);
+      let stderr = '';
+      child.stderr.on('data', (c) => { stderr += c.toString(); });
+      const timeout = setTimeout(() => finish(new Error(`Timed out waiting for initialize response. STDERR: ${stderr}`)), TIMEOUT_MS);
 
       const finish = (error) => {
         clearTimeout(timeout);

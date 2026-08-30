@@ -23,11 +23,13 @@ async function testReadCompletedProcessOutput() {
   assert(pidMatch, 'Should get PID from start_process');
   const pid = parseInt(pidMatch[1]);
   
-  // Wait for the actual command to complete
-  await new Promise(resolve => setTimeout(resolve, 2000));
-  
-  // Try to read the output - this should work when fixed
-  const readResult = await readProcessOutput({ pid, timeout_ms: 1000 });
+  // Wait for the actual command to complete and output to be available
+  let readResult;
+  for (let i = 0; i < 20; i++) {
+    readResult = await readProcessOutput({ pid, timeout_ms: 500 });
+    if (readResult?.content?.[0]?.text?.includes('SUCCESS MESSAGE')) break;
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
   
   // ASSERT: Should be able to read from completed process
   assert(!readResult.isError, 
@@ -57,11 +59,13 @@ async function testImmediateCompletion() {
   assert(pidMatch, 'Should get PID from start_process');
   const pid = parseInt(pidMatch[1]);
   
-  // Small delay to ensure process completed
-  await new Promise(resolve => setTimeout(resolve, 100));
-  
-  // Should be able to read from immediately completed process
-  const readResult = await readProcessOutput({ pid, timeout_ms: 1000 });
+  // Wait for process to complete
+  let readResult;
+  for (let i = 0; i < 20; i++) {
+    readResult = await readProcessOutput({ pid, timeout_ms: 500 });
+    if (readResult?.content?.[0]?.text?.includes('IMMEDIATE OUTPUT')) break;
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
   
   assert(!readResult.isError, 
     'Should be able to read from immediately completed process');
