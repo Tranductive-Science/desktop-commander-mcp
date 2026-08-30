@@ -57,4 +57,8 @@ mcpb-bundle/
 test_files/
 test_fix.js
 test_search.js
+test-run.js
 .ripgrep-downloads/
+chrome-profile/
+repair-backup-*/
+

@@ -1,21 +1,28 @@
-# Desktop Commander MCP
-### Search, update, manage files and run terminal commands with AI
+# Desktop Commander MCP (Transductive Edge Edition)
+### Search, update, manage files, run terminal commands with AI — Now with Native Streamable HTTP & ChatGPT OAuth Support
 
-[![npm downloads](https://img.shields.io/npm/dw/@wonderwhy-er/desktop-commander)](https://www.npmjs.com/package/@wonderwhy-er/desktop-commander)
-[![AgentAudit Verified](https://agentaudit.dev/api/badge/desktop-commander)](https://agentaudit.dev/skills/desktop-commander)
-[![Trust Score](https://archestra.ai/mcp-catalog/api/badge/quality/wonderwhy-er/DesktopCommanderMCP)](https://archestra.ai/mcp-catalog/wonderwhy-er__desktopcommandermcp)
-[![smithery badge](https://smithery.ai/badge/@wonderwhy-er/desktop-commander)](https://smithery.ai/server/@wonderwhy-er/desktop-commander)
-[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support-yellow.svg)](https://www.buymeacoffee.com/wonderwhyer)
+> **Powered by [Transductive Science](https://transductive.org)** — Bridging foundational agentic frameworks, multi-tenant MCP edge runtimes, and autonomous tooling across desktop and cloud ecosystems.
 
+[![Transductive Science](https://img.shields.io/badge/Transductive-Science-7c3aed?style=for-the-badge&logo=cloudflare&logoColor=white)](https://transductive.org)
+[![ChatGPT Ready](https://img.shields.io/badge/ChatGPT-Custom%20App%20%26%20MCP%20Ready-10a37f?style=for-the-badge&logo=openai&logoColor=white)](https://chatgpt.com)
+[![Streamable HTTP](https://img.shields.io/badge/MCP-Streamable%20HTTP%20%2B%20OAuth%202.0-0284c7?style=for-the-badge)](https://modelcontextprotocol.io)
 
-[![Discord](https://img.shields.io/badge/Join%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/kQ27sNnZr7)
+---
 
+## ⚡ What’s New in the Transductive Edge Edition?
 
-Work with code and text, run processes, and automate tasks, going far beyond other AI editors - while using host client subscriptions instead of API token costs.
+Upstream Desktop Commander traditionally operated via local `stdio` (designed for Claude Desktop). Many community members asked for remote connectivity, HTTP transport, and direct ChatGPT / web-agent integration.
 
-<a href="https://glama.ai/mcp/servers/zempur9oh4">
-  <img width="380" height="200" src="https://glama.ai/mcp/servers/zempur9oh4/badge" alt="Desktop Commander MCP" />
-</a>
+This edition adds full **Production-Grade Streamable HTTP & OAuth 2.0 Edge Deployment**:
+
+* 🌐 **Native Streamable HTTP Transport**: Implements the official MCP Streamable HTTP 2024-11-05 specification (`/mcp`, `/healthz`, `/readyz`).
+* 🔐 **Built-in OAuth 2.0 / OIDC Authorization**: Full PKCE S256 verification, protected resource metadata (`/.well-known/oauth-protected-resource/mcp`), and RS256 JWT validation via JWKS.
+* 🤖 **Turnkey ChatGPT Integration**: Direct support for ChatGPT Custom Apps, Developer Connectors, and OpenAI Actions with instant tool scanning (all 26 desktop tools supported).
+* 🛡️ **Cloudflare Edge & Tunnel Compatible**: Seamlessly routes through Cloudflare named tunnels or reverse proxies with multi-session isolation and request-local log streaming.
+* ⚙️ **Durable Background Runners**: Auto-healing Windows service runners and background daemons for 24/7 autonomous uptime.
+
+---
+
 
 ## 🖥️ Try the Desktop Commander App (Beta)
 
