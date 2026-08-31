@@ -1,7 +1,0 @@
-name = "desktopcommander-auth"
-main = "src/index.js"
-compatibility_date = "2024-09-23"
-account_id = "d4204bfece1421ae859e5fba54c0a385"
-
-# Route to custom domain if available, or workers.dev by default
-workers_dev = true
