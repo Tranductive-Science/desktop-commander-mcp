@@ -1,4 +1,4 @@
-import { runHttpServer } from '../dist/http/index.js';
+import fs from 'node:fs';
 
 process.env.USERPROFILE = process.env.USERPROFILE || 'C:\\Users\\Admin';
 process.env.HOME = process.env.HOME || 'C:\\Users\\Admin';
@@ -9,8 +9,6 @@ process.env.DESKTOP_COMMANDER_OAUTH_ISSUER = process.env.DESKTOP_COMMANDER_OAUTH
 process.env.DESKTOP_COMMANDER_OAUTH_VERIFIER_MODULE = process.env.DESKTOP_COMMANDER_OAUTH_VERIFIER_MODULE || './scripts/jwt-verifier.js';
 process.env.DESKTOP_COMMANDER_PUBLIC_BASE_URL = process.env.DESKTOP_COMMANDER_PUBLIC_BASE_URL || 'https://desktopcommander.transductive.art';
 process.env.DESKTOP_COMMANDER_DISABLE_TELEMETRY = '1';
-
-import fs from 'node:fs';
 
 process.on('uncaughtException', (err) => {
     try {
@@ -25,6 +23,7 @@ process.on('unhandledRejection', (reason) => {
 });
 
 async function main() {
+    const { runHttpServer } = await import('../dist/http/index.js');
     await runHttpServer();
     setInterval(() => {}, 60000);
 }
